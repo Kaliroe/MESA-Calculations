@@ -56,11 +56,12 @@ mesa_0350 = mesa_data1[46:]
 #mesa_0350 = mesa_data1[46:92]
 #mesa_0400 = mesa_data1[92:]
 
-history_error = '0.100_3.360_error/LOGS1/history.data'
+history_error = '0.100_3.370_error/LOGS1/history.data'
 history_in = '0.100_3.390_no_interaction/LOGS1/history.data'
 history_smt = '0.100_3.380_stable_MT/LOGS1/history.data'
-history_merger = '0.100_3.300_CE_merger/LOGS1/history.data'
-history_ejection = '0.100_3.320_CE_ejection/LOGS1/history.data'
+history_merger = '0.100_3.280_CE_merger/LOGS1/history.data'
+history_ejection_m = '0.100_3.320_CE_ejection_m/LOGS1/history.data'
+history_ejection = '0.100_3.350_CE_ejection/LOGS1/history.data'
 
 
 """General functions for reading history.data and binary_history.data files"""
@@ -135,35 +136,66 @@ def b_separation(string, save = False, name = "000"):
 
 def rl_overflow(string, save = False, name = "000"):
     history = md.mesa_data(string)
-    model = history.get("model_number")
+    #model = history.get("model_number")
+    model = history.get("star_1_mass")
     rl1 = history.get("rl_relative_overflow_1")
-    #rl2 = history.get("rl_relative_overflow_2")
-    #CE = history.get("CE_flag")
-    m1 = history.get("lg_mtransfer_rate")
-    fig, ax1 = plt.subplots(figsize=(9,5))
-    ax1.set_xlabel("model number")
-    ax1.set_ylabel("Relative Overflow")
-    ax1.plot(model, rl1, label="rl 1", color="c")
-    #ax1.plot(model, rl2, label="rl 2", color="g")
+    Radius_flag = history.get("Radius_Lagrangian_flag")
+    L3_flag = history.get("Outer_Lagrangian_flag")
+    
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel("Donor Mass")
+    ax1.set_ylabel("Relative Roche Lobe overflow")
+    ax1.plot(model, rl1, label="Roche Lobe overflow", color="c")
     ax1.tick_params(axis='y', labelcolor="c")
-    plt.legend()
-    plt.title("rl_relative_overflow_" + name)
 
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
-    #ax2.set_ylabel("Common Envelope Flag")  # we already handled the x-label with ax1
-    #ax2.plot(model, CE, label="CE flag", color="m")
-    #ax2.tick_params(axis='y', labelcolor="m")
-    ax2.set_ylabel("Log Mass Transfer Rate")  # we already handled the x-label with ax1
-    ax2.plot(model, m1, label="Transfer Rate", color="m")
+    ax2.set_ylabel("Mass Transfer Flag")  # we already handled the x-label with ax1
+    ax2.plot(model, L3_flag, label="Outer Mass Transfer Flag", color="m")
+    ax2.plot(model, Radius_flag, label="Radius Outer Mass Transfer Flag")
     ax2.tick_params(axis='y', labelcolor="m")
-    ax2.set_ylim(-6,0)
     plt.legend()
+
+    plt.title("Mass Transfer Rate")
     if save:
         plt.savefig( "rl_relative_overflow_" + name + ".png")
-    plt.show()
+    #plt.show()
 
+def mt_types(string, save = False, name = "000"):
+    
+    #take abs and put on log scale
+    
+    history = md.mesa_data(string)
+    #model = history.get("model_number")
+    model = history.get("star_1_mass")
+    rl1 = history.get("rl_relative_overflow_1")
+    CE = history.get("CE_flag")
+    Outer_thick = history.get("Outer_MT_thick")
+    Outer_thick = np.abs(Outer_thick)
+    L1_thick = history.get("L1_MT_thick")
+    L1_thick = np.abs(L1_thick)
+    
+    fig, ax1 = plt.subplots()
+    ax1.set_xlabel("Donor Mass")
+    ax1.set_ylabel("Relative Roche Lobe overflow")
+    ax1.plot(model, rl1, label="Roche Lobe overflow", color="c")
+    ax1.plot(model, CE, label="CE flag", color = "darkorange")
+    ax1.tick_params(axis='y', labelcolor="c")
+    plt.legend(loc = 'lower left')
 
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+    ax2.set_ylabel("Mass Transfer")  # we already handled the x-label with ax1
+    ax2.plot(model, Outer_thick, label="Outer MT thick", color="m")
+    ax2.plot(model, L1_thick, label="L1 MT thick")
+    ax2.tick_params(axis='y', labelcolor="m")
+    ax2.set_yscale("log")
+    plt.legend()
+
+    plt.title("Mass Transfer Rate")
+    if save:
+        plt.savefig( "MT_rates_" + name + ".png")
+    #plt.show()
 
 def mass_comp(string):
     history = md.mesa_data(string)
@@ -213,14 +245,30 @@ def mass_rate_comp(string):
     plt.title("Mass Loss")
     plt.legend()
     
-def mass_trans(string):
+def mass_trans(string, string2= "name"):
     history = md.mesa_data(string)
-    model = history.get("model_number")
+    #model = history.get("model_number")
+    model = history.get("star_1_mass")
     m1 = history.get("lg_mtransfer_rate")
-    plt.plot(model,m1)
-    plt.xlabel("Model Number")
+    plt.plot(model, m1, label = string2)
+    plt.xlabel("Donor Mass")
     plt.ylabel("Log Rate of Mass Transfer")
     plt.title("Mass Transfer Rate")
+    
+def mass_types(string):
+    history = md.mesa_data(string)
+    #model = history.get("model_number")
+    model = history.get("star_1_mass")
+    m1 = history.get("L1_MT_thin_flag")
+    m2 = history.get("L1_MT_thin")
+    #m2 = np.abs(m2)
+    m2 = -m2
+    #m2 = np.log10(m2)
+    plt.plot(model, m1, label = "MT thin flag")
+    plt.plot(model, m2, label = "MT thin rate")
+    plt.xlabel("Donor Mass")
+    plt.ylabel("Log Rate of Mass Transfer")
+    plt.title("Thin Mass Transfer Rate")
     
 def mass_trans_CE(string, save = False, name = "000"):
     history = md.mesa_data(string)
@@ -247,9 +295,9 @@ def mass_trans_CE(string, save = False, name = "000"):
     plt.show()
 
 def plot_shit():
-    merger = md.mesa_data('0.100_3.300_CE_merger/binary_history.data')
+    merger = md.mesa_data('0.100_3.280_CE_merger/binary_history.data')
     ejection = md.mesa_data('0.100_3.350_CE_ejection/binary_history.data')
-    error = md.mesa_data('0.100_3.360_error/binary_history.data')
+    error = md.mesa_data('0.100_3.370_error/binary_history.data')
     stable = md.mesa_data('0.100_3.380_stable_MT/binary_history.data')
     no_interaction = md.mesa_data('0.100_3.390_no_interaction/binary_history.data')
     
@@ -286,9 +334,10 @@ def plot_shit():
 def log_dt():
     history_ni = md.mesa_data('0.100_3.390_no_interaction/LOGS1/history.data')
     history_smt = md.mesa_data('0.100_3.380_stable_MT/LOGS1/history.data')
-    history_merger = md.mesa_data('0.100_3.300_CE_merger/LOGS1/history.data')
-    history_error = md.mesa_data('0.100_3.360_error/LOGS1/history.data')
-    history_ejection = md.mesa_data('0.100_3.320_CE_ejection/LOGS1/history.data')
+    history_merger = md.mesa_data('0.100_3.280_CE_merger/LOGS1/history.data')
+    history_error = md.mesa_data('0.100_3.370_error/LOGS1/history.data')
+    history_ejection = md.mesa_data('0.100_3.350_CE_ejection/LOGS1/history.data')
+    history_ejection_m = md.mesa_data('0.100_3.320_CE_ejection_m/LOGS1/history.data')
     
     log_dt_error = history_error.get("log_dt")
     model_error = history_error.get("model_number")
@@ -305,17 +354,25 @@ def log_dt():
     log_dt_ejection = history_ejection.get("log_dt")
     model_ejection = history_ejection.get("model_number")
     
-    plt.plot(model_smt, log_dt_smt,".", label = "stable mass transfer")
+    log_dt_ejection_m = history_ejection_m.get("log_dt")
+    model_ejection_m = history_ejection_m.get("model_number")
     
-    plt.plot(model_ejection, log_dt_ejection,".", label = "ejection")
+    plt.plot(model_smt, log_dt_smt, label = "stable mass transfer")
     
-    plt.plot(model_ni, log_dt_ni,".", label = "no interaction")
+    plt.plot(model_ejection, log_dt_ejection, label = "ejection")
     
-    plt.plot(model_error, log_dt_error,".", label = "error")
+    plt.plot(model_ejection_m, log_dt_ejection_m, label = "ejection merger")
     
-    plt.plot(model_merger, log_dt_merger,".", label = "merger")
+    plt.plot(model_ni, log_dt_ni, label = "no interaction")
+    
+    plt.plot(model_error, log_dt_error, label = "error")
+    
+    plt.plot(model_merger, log_dt_merger, label = "merger")
     
     plt.legend()
+    
+    plt.xlabel("Model Number")
+    plt.ylabel("Log(dt)")
     
     plt.savefig("log_dt.png")
     
@@ -354,9 +411,10 @@ def ce_comp():
     
     history_ni = md.mesa_data('0.100_3.390_no_interaction/LOGS1/history.data')
     history_smt = md.mesa_data('0.100_3.380_stable_MT/LOGS1/history.data')
-    history_merger = md.mesa_data('0.100_3.300_CE_merger/LOGS1/history.data')
-    history_error = md.mesa_data('0.100_3.360_error/LOGS1/history.data')
-    history_ejection = md.mesa_data('0.100_3.320_CE_ejection/LOGS1/history.data')
+    history_merger = md.mesa_data('0.100_3.280_CE_merger/LOGS1/history.data')
+    history_error = md.mesa_data('0.100_3.370_error/LOGS1/history.data')
+    history_ejection = md.mesa_data('0.100_3.350_CE_ejection/LOGS1/history.data')
+    history_ejection_m = md.mesa_data('0.100_3.320_CE_ejection_m/LOGS1/history.data')
     
     mass_rate_error = history_error.get("lg_mtransfer_rate")
     model_error = history_error.get("model_number")
@@ -378,7 +436,11 @@ def ce_comp():
     model_ejection = history_ejection.get("model_number")
     CE_ejection = history_ejection.get("CE_flag")
     
-    fig, ax1 = plt.subplots(figsize=(10,7))
+    mass_rate_ejection_m = history_ejection_m.get("lg_mtransfer_rate")
+    model_ejection_m = history_ejection_m.get("model_number")
+    CE_ejection_m = history_ejection_m.get("CE_flag")
+    
+    fig, ax1 = plt.subplots(figsize=(13,6))
     ax1.set_xlabel("Model Number")
     ax1.set_ylabel("Log Rate of Mass Loss")
 
@@ -386,6 +448,8 @@ def ce_comp():
     ax1.plot(model_smt, mass_rate_smt,".", label = "stable MT (transfer)")
     
     ax1.plot(model_ejection, mass_rate_ejection,".", label = "ejection (transfer)")
+
+    ax1.plot(model_ejection_m, mass_rate_ejection_m,".", label = "ejection merger (transfer)")
     
     ax1.plot(model_ni, mass_rate_ni,".", label = "no interaction (transfer)")
     
@@ -405,6 +469,8 @@ def ce_comp():
     ax2.plot(model_smt, CE_smt, label = "stable MT (CE)")
     
     ax2.plot(model_ejection, CE_ejection, label = "ejection (CE)")
+    
+    ax2.plot(model_ejection_m, CE_ejection_m, label = "ejection merger (CE)")
     
     ax2.plot(model_ni, CE_ni, label = "no interaction (CE)")
     
