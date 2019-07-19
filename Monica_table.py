@@ -100,6 +100,23 @@ def get_stable_values(data):
     
     return punique, qunique, resunique
 
+def get_radial_values(data):
+    '''
+    requires: data
+    returns: unique values for P, q, and results
+    '''
+    
+    p = data['log10(P_i)(days)']
+    punique = np.unique(p)
+    
+    q = data['qratio(M_2i/M_1i)']
+    qunique = np.unique(q)
+
+    res = data['Relative_overflow']
+    resunique = np.unique(res)    
+    
+    return punique, qunique, resunique
+
 ## edit here 
 
 my_data = '/Users/kaliroe/Downloads/mesa-dev/massive_bins_1.500.dat'
@@ -230,7 +247,7 @@ def make_graph(file, show = True, save = False, name = 'massive_bins_graph'):
     #ax.set_xticks(np.linspace(.3,.4,3))
     
     
-    ax.set_xlabel(r'$q$', fontsize=18)
+    ax.set_xlabel(r'$1/q$', fontsize=18)
     ax.set_ylabel(r'$\log_{10}P_{\rm orb,i} \ [\rm{days}]$', fontsize=18)
     
     legend_list = []
@@ -355,7 +372,7 @@ def make_outer_graph(file, show = True, save = False, name = 'massive_bins_graph
     #ax.set_xticks(np.linspace(.3,.4,3))
     
     
-    ax.set_xlabel(r'$q$', fontsize=18)
+    ax.set_xlabel(r'$1/q$', fontsize=18)
     ax.set_ylabel(r'$\log_{10}P_{\rm orb,i} \ [\rm{days}]$', fontsize=18)
     
     legend_list = []
@@ -447,6 +464,7 @@ def make_stability_graph(file, show = True, save = False, name = 'massive_bins_g
                     evol[j] = res_dictionary['None']
                 else:
                     result_string = result_for_mi_array[result_ind][0]
+                    #print("result string",result_string)
                     result_ID = res_dictionary[result_string]
                     evol[j] = result_ID
                     
@@ -459,18 +477,294 @@ def make_stability_graph(file, show = True, save = False, name = 'massive_bins_g
     fig, ax = plt.subplots(figsize=(10,11))
     h = plt.pcolormesh(QQ, PP, np.array(evol_all).T, cmap=cmap, norm=norm, edgecolors = 'white')
 
+    ax.tick_params(axis='both', labelsize=22)
     
-    ax.set_xlabel(r'$q$', fontsize=18)
-    ax.set_ylabel(r'$\log_{10}P_{\rm orb,i} \ [\rm{days}]$', fontsize=18)
+    ax.set_xlabel(r'$1/q$', fontsize=25)
+    ax.set_ylabel(r'$\log_{10}P_{\rm orb,i} \ [\rm{days}]$', fontsize=25)
     
     legend_list = []
     for i, result in enumerate(color_dictionary.items()):
         color_ = color_dictionary[result[0]]
-        legend_list.append( mlines.Line2D([], [], color=color_, linestyle = 'None', marker='s', markersize=11, label=result[0] )  )
+        legend_list.append( mlines.Line2D([], [], color=color_, linestyle = 'None', marker='s', markersize=20, label=result[0] )  )
     
-    lgd = ax.legend( handles = legend_list ,bbox_to_anchor=(0.5, 1.05, 0.0, 0),loc = 'center', fontsize = 15., frameon = False, handletextpad=1.0, handlelength = 1.3, ncol = 3, numpoints = 1 )
+    lgd = ax.legend( handles = legend_list ,bbox_to_anchor=(0.5, 1.05, 0.0, 0),loc = 'center', fontsize = 25., frameon = False, handletextpad=1.0, handlelength = 1.3, ncol = 3, numpoints = 1 )
+    """    
+    x_q = []
+    y_p = []
+    
+    #fig, ax = plt.subplots()
+    
+    for q in qunique:
+        for p in punique:
+            x_q.append(q)
+            y_p.append(p)
+            
+    res2 = data['Relative_overflow']
+    
+    sctr = ax.scatter(x=x_q, y=y_p, c=res2, cmap='gist_stern')
+            
+    plt.colorbar(sctr, ax=ax, format='%d')"""
     
     if save:
         plt.savefig(name + '.png')
     if show:
         plt.show()
+
+def make_radius_graph(file, show = True, save = False, name = 'massive_bins_graph'):
+    data = ascii.read(file)
+    
+    punique, qunique, resunique = get_radial_values(data)
+    
+    x_q = []
+    y_p = []
+    
+    fig, ax = plt.subplots()
+    
+    for q in qunique:
+        for p in punique:
+            x_q.append(q)
+            y_p.append(p)
+            
+    #resunique = data['Relative_overflow']
+    
+    
+    qvals, QQ, pvals, PP = make_axis(qunique, punique)
+    
+    # determine colors
+    color_dictionary = {'between_zero_one':   'lavenderblush',
+                      'between_one_two': 'coral',#'pink',
+                      'greater_than_two': 'crimson',
+                      'less_than_zero': 'darkred'} #changed
+    
+    final_colors = []
+    res_dictionary = {}
+    for i in range(0,len(resunique)+1):
+        
+        if i < (len(resunique)):
+            result = resunique[i]
+            res_dictionary[result] = i 
+            
+        # always add a result = "None" corresponding to grids without data
+        else:
+            result = 'None'
+            res_dictionary[result] = i
+        
+        #print(result)
+        
+        if result == 'None':
+            color = 'white'
+        elif result < 0:
+            color = color_dictionary['less_than_zero']
+        elif result >= 0 and result < 1:
+            color = color_dictionary['between_zero_one']
+        elif result >= 1 and result < 2:
+            color = color_dictionary['between_one_two']
+        elif result > 2:
+            color = color_dictionary['greater_than_two']
+        final_colors.append( color )
+        
+    # create color boundaries to be used in plot    
+    color_bounds = []
+    vals = np.arange(0,len(res_dictionary))
+    shift = ((vals[1]-vals[0]))/2
+    new_vals = vals-shift
+    last = vals[-1]+shift
+    color_bounds = list(new_vals)
+    color_bounds.append(last)    
+    
+    #print((res_dictionary))
+    
+    #print( (punique[-1]))
+    #pvals = np.arange(start = punique[0], stop = punique[-1] + 0.01, step=0.01 )
+    p_step = punique[1] - punique[0]
+    pvals = np.arange(start = punique[0], stop = punique[-1], step=p_step )
+    #print(pvals)
+    
+    evol_all = []
+    for i, mass_ratio in enumerate(qvals):
+        
+        m_i_idx = np.where(data['qratio(M_2i/M_1i)'] ==   np.around(mass_ratio,2))[0]
+        p_for_mi = data['log10(P_i)(days)'][m_i_idx]
+        result_for_mi = data['Relative_overflow'][m_i_idx]
+        
+        # check if the index array is empty
+        # if empty, result at all P for that mass_ratio = 100
+        if m_i_idx.size == 0:
+            evol = np.ones_like(pvals)*res_dictionary['None']
+            
+        else: 
+            evol = np.ones_like(pvals)
+            for j, period in enumerate(pvals):
+                p_for_mi_array      = np.array(p_for_mi)
+                result_for_mi_array = np.array(result_for_mi)
+                
+                # grab index for the result of mass_ratio_i and period_j
+                result_ind = np.where(p_for_mi_array ==  np.around(period,2))[0] 
+            
+                if result_ind.size ==0:
+                    evol[j] = res_dictionary['None']
+                else:
+                    result_string = result_for_mi_array[result_ind][0]
+                    #print("result string",result_string)
+                    result_ID = res_dictionary[result_string]
+                    evol[j] = result_ID
+                    
+        evol_all.append(evol)
+        
+    
+    cmap = colors.ListedColormap(final_colors)
+    norm = colors.BoundaryNorm(color_bounds, cmap.N)
+    
+    fig, ax = plt.subplots(figsize=(10,11))
+    h = plt.pcolormesh(QQ, PP, np.array(evol_all).T, cmap=cmap, norm=norm, edgecolors = 'white')
+
+    ax.tick_params(axis='both', labelsize=22)
+    
+    ax.set_xlabel(r'$1/q$', fontsize=25)
+    ax.set_ylabel(r'$\log_{10}P_{\rm orb,i} \ [\rm{days}]$', fontsize=25)
+    
+    legend_list = []
+    for i, result in enumerate(color_dictionary.items()):
+        color_ = color_dictionary[result[0]]
+        legend_list.append( mlines.Line2D([], [], color=color_, linestyle = 'None', marker='s', markersize=20, label=result[0] )  )
+    
+    lgd = ax.legend( handles = legend_list ,bbox_to_anchor=(0.5, 1.05, 0.0, 0),loc = 'center', fontsize = 25., frameon = False, handletextpad=1.0, handlelength = 1.3, ncol = 3, numpoints = 1 )
+    
+    if save:
+        plt.savefig(name + '.png')
+    if show:
+        plt.show()
+
+
+def make_new_graph(file, show = True, save = False, name = 'massive_bins_graph'):
+    data = ascii.read(file)
+    #data = pd.read_csv(file, comment='#', delim_whitespace=True)
+    
+    punique, qunique, resunique = get_unique_values(data)
+    
+    qvals, QQ, pvals, PP = make_axis(qunique, punique)
+    
+    # determine colors
+    color_dictionary = {'CE_termination':   'salmon', #'lightcoral',
+                      'error':         'gold',
+                      'no_interaction': '#473335',
+                      'stable_MT_to_wide_binary': 'lavender',
+                      'stable_MT_to_merger': 'cornflowerblue',
+                      'None': 'white',
+                      'No_Run':          'white' } #changed
+    
+    final_colors = []
+    res_dictionary = {}
+    for i in range(0,len(resunique)+1):
+        
+        if i < (len(resunique)):
+            result = resunique[i]
+            res_dictionary[result] = i         
+            
+        # always add a result = "None" corresponding to grids without data
+        else:
+            result = 'None'
+            res_dictionary[result] = i
+        final_colors.append( color_dictionary[result] )
+        
+    # create color boundaries to be used in plot    
+    color_bounds = []
+    vals = np.arange(0,len(res_dictionary))
+    shift = ((vals[1]-vals[0]))/2
+    new_vals = vals-shift
+    last = vals[-1]+shift
+    color_bounds = list(new_vals)
+    color_bounds.append(last)    
+    
+    print((res_dictionary))
+    
+    # here is where things can break
+    # np.arange does weird things with the precision of floats. 
+    # Something this cell works perfectly and other times the values/shape of 
+    # pvals is wrong
+    
+    # if the code crashes because the shapes of  X, Y, and Z in the plot are not 
+    # compatible, this cell might be wrong
+    
+    # In that case, make sure that pvals has a min = punique[0] and max = punique[-1]
+    # with increments of 0.01
+    
+    print( (punique[-1]))
+    #pvals = np.arange(start = punique[0], stop = punique[-1] + 0.01, step=0.01 )
+    p_step = punique[1] - punique[0]
+    pvals = np.arange(start = punique[0], stop = punique[-1], step=p_step )
+    print(pvals)
+    
+    evol_all = []
+    for i, mass_ratio in enumerate(qvals):
+        
+        m_i_idx = np.where(data['qratio(M_2i/M_1i)'] ==   np.around(mass_ratio,2))[0]
+        p_for_mi = data['log10(P_i)(days)'][m_i_idx]
+        result_for_mi = data['result'][m_i_idx]
+        
+        # check if the index array is empty
+        # if empty, result at all P for that mass_ratio = 100
+        if m_i_idx.size == 0:
+            evol = np.ones_like(pvals)*res_dictionary['None']
+            
+        else: 
+            evol = np.ones_like(pvals)
+            for j, period in enumerate(pvals):
+                # np.arange includes too many decimals (e.g. 0.1 = 0.99999998) and np.where does not work
+                # np.where will result indicies starting from 0
+                # result_for_mi and p_for_mi have can have indicies starting with values != 0 because p_for_mi
+                #          is a pandas DataFrame
+                # I change the pandas DataFrame to arrays to that their inidicies will start from 0
+    
+                # periods and results in data
+                p_for_mi_array      = np.array(p_for_mi)
+                result_for_mi_array = np.array(result_for_mi)
+                
+                # grab index for the result of mass_ratio_i and period_j
+                result_ind = np.where(p_for_mi_array ==  np.around(period,2))[0] 
+            
+                if result_ind.size ==0:
+                    evol[j] = res_dictionary['None']
+                else:
+                    result_string = result_for_mi_array[result_ind][0]
+                    result_ID = res_dictionary[result_string]
+                    evol[j] = result_ID
+                    
+        evol_all.append(evol)
+        
+    # QQ and PP should have the same shape
+    # np.array(evol_all).T should have oness element in its columns
+    
+    
+    
+    print(np.shape(QQ))
+    print(np.shape(PP))
+    print(np.shape(np.array(evol_all).T))
+    
+    cmap = colors.ListedColormap(final_colors)
+    norm = colors.BoundaryNorm(color_bounds, cmap.N)
+    
+    fig, ax = plt.subplots(figsize=(10,11))
+    h = plt.pcolormesh(QQ, PP, np.array(evol_all).T, cmap=cmap, norm=norm, edgecolors = 'white')
+    
+    # edit this to make the x axis tickmarks match the actual values of q 
+    #ax.set_xticks(np.linspace(.3,.4,3))
+    
+    ax.tick_params(axis='both', labelsize=22)
+    
+    ax.set_xlabel(r'$1/q$', fontsize=25)
+    ax.set_ylabel(r'$\log_{10}P_{\rm orb,i} \ [\rm{days}]$', fontsize=25)
+    
+    legend_list = []
+    for i, result in enumerate(res_dictionary.items()):
+        color_ = color_dictionary[result[0]]
+        print(color_)
+        legend_list.append( mlines.Line2D([], [], color=color_, linestyle = 'None', marker='s', markersize=12, label=result[0] )  )
+    
+    lgd = ax.legend( handles = legend_list ,bbox_to_anchor=(0.5, 1.05, 0.0, 0),loc = 'center', fontsize = 18., frameon = False, handletextpad=1.0, handlelength = 1.3, ncol = 3, numpoints = 1 )
+    
+    if save:
+        plt.savefig(name + '.png')
+    if show:
+        plt.show()
+
