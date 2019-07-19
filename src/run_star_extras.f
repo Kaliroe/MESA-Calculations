@@ -68,212 +68,6 @@
          s% job% warn_run_star_extras=.false.
 
       end subroutine extras_controls
-      
-!FUNCTIONS ADDED FOR CALCULATING THE MASS TRANSFER AT THE OUTER LAGRANGIAN POINT
-
-      real(dp) function Phi_func(b,x,y,z) result(Phi_eq)
-         real(dp), intent(in) :: x, y, z
-         real(dp) :: q, x_cm, r, r2
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-         x_cm = 1/(1+q)
-         r = sqrt(x*x+y*y+z*z)
-         r2 = sqrt(((1-x)*(1-x))+y*y+z*z)
-         Phi_eq = -q/(r*(1+q)) -1/((q+1)*r2)&
-                  -(1/2)*((x-x_cm)*(x-x_cm)+y*y)
-      end function Phi_func
-
-      real(dp) function dPhidx(b,x,y,z) result(derivative)
-         real(dp), intent(in) :: x, y, z
-         real(dp) :: q, x_cm, r, r2
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-         x_cm = 1/(1+q)
-         r = sqrt(x*x+y*y+z*z)
-         r2 = sqrt(((1-x)*(1-x))+y*y+z*z)
-         derivative = q*x/((1+q)*r*r*r) -(1-x)/((1+q)*r2*r2) -(x-x_cm)
-
-      end function dPhidx
-
-      real(dp) function ddPhidy(b,x,y,z) result(ddpdy)
-         real(dp), intent(in) :: x, y, z
-         real(dp) :: x_cm, r, q, r2
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-         r = sqrt(x*x+y*y+z*z)
-         r2 = sqrt(((1-x)*(1-x))+y*y+z*z)
-         ddpdy = q/((1+q)*r*r*r) - 3*q*y*y/((1+q)*r*r*r*r*r) + &
-            1/((1+q)*r2*r2*r2)- 3*y*y/((1+q)*r2*r2*r2*r2*r2) - 1
-      end function ddPhidy
-
-      real(dp) function ddPhidz(b,x,y,z) result(ddpdz)
-         real(dp), intent(in) :: x, y, z
-         real(dp) :: q, x_cm, r, r2
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-         r = sqrt(x*x+y*y+z*z)
-         r2 = sqrt(((1-x)*(1-x))+y*y+z*z)
-         ddpdz = q/((1+q)*r*r*r) - 3*q*z*z/((1+q)*r*r*r*r*r) + &
-            1/((1+q)*r2*r2*r2) - 3*z*z/((1+q)*r2*r2*r2*r2*r2)
-      end function ddPhidz
-
-      real(dp) function ddddPhidy(b,x,y,z) result(ddddpdy)
-         real(dp), intent(in) :: x, y, z
-         real(dp) :: q, x_cm, r, r2
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-         x_cm = 1/(1+q)
-         r = sqrt(x*x+y*y+z*z)
-         r2 = sqrt(((1-x)*(1-x))+y*y+z*z)
-         ddddpdy = -(1/(1+q))*(q*(3/(r*r*r*r*r) - 15*y*y/(r*r*r*r*r*r*r) + 6/(r*r*r*r*r) &
-            - 30*y*y/(r*r*r*r*r*r*r) - 45*y*y/(r*r*r*r*r*r*r) + 105*y*y*y*y/(r*r*r*r*r*r*r*r*r))&
-            + 3/(r2*r2*r2*r2*r2) - 15*y*y/(r2*r2*r2*r2*r2*r2*r2) + 6/(r2*r2*r2*r2*r2*r2*r2)&
-            - 30*y*y/(r2*r2*r2*r2*r2*r2*r2) - 45*y*y/(r2*r2*r2*r2*r2*r2*r2)&
-            + 105*y*y*y*y/(r2*r2*r2*r2*r2*r2*r2*r2*r2))
-      end function ddddPhidy
-
-      real(dp) function ddddPhidz(b,x,y,z) result(ddddpdz)
-         real(dp), intent(in) :: x, y, z
-         real(dp) :: q, x_cm, r, r2
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-         x_cm = 1/(1+q)
-         r = sqrt(x*x+y*y+z*z)
-         r2 = sqrt(((1-x)*(1-x))+y*y+z*z)
-         ddddpdz = -(1/(1+q))*(q*(3/(r*r*r*r*r) - 15*z*z/(r*r*r*r*r*r*r) + 6/(r*r*r*r*r) &
-            - 30*z*z/(r*r*r*r*r*r*r) - 45*z*z/(r*r*r*r*r*r*r) + 105*z*z*z*z/(r*r*r*r*r*r*r*r*r))&
-            + 3/(r2*r2*r2*r2*r2) - 15*z*z/(r2*r2*r2*r2*r2*r2*r2) + 6/(r2*r2*r2*r2*r2*r2*r2)&
-            - 30*z*z/(r2*r2*r2*r2*r2*r2*r2) - 45*z*z/(r2*r2*r2*r2*r2*r2*r2)&
-            + 105*z*z*z*z/(r2*r2*r2*r2*r2*r2*r2*r2*r2))
-      end function ddddPhidz
-
-      real(dp) function ddddPhidyz(b,x,y,z) result(ddddpdyz)
-         real(dp), intent(in) :: x, y, z
-         real(dp) :: q, x_cm, r, r2
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-         x_cm = 1/(1+q)
-         r = sqrt(x*x+y*y+z*z)
-         r2 = sqrt(((1-x)*(1-x))+y*y+z*z)
-         ddddpdyz = (1/(1+q))*(q*(-3/(r*r*r*r*r) + 15*z*z/(r*r*r*r*r*r*r) + 15*y*y/&
-            (r*r*r*r*r*r*r) - 75*z*z*y*y/(r*r*r*r*r*r*r)) - 3/(r2*r2*r2*r2*r2)&
-            + 15*z*z/(r2*r2*r2*r2*r2*r2*r2) + 15*y*y/(r2*r2*r2*r2*r2*r2*r2)&
-            - 105*z*z*y*y/(r2*r2*r2*r2*r2*r2*r2*r2*r2))
-      end function ddddPhidyz
-
-      real(dp) function find_L1(b) result(L1)
-         real(dp) :: limit, tolerance, x, upper_bound, lower_bound, dPhi_new
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         upper_bound = 1d0
-         lower_bound = 0d0
-         x = 0d0
-         limit = abs(upper_bound-lower_bound)
-         tolerance = 0.00001d0
-  
-         do while (limit > tolerance)
-            x = (lower_bound+upper_bound)/2
-            dPhi_new = dPhidx(b,x,0d0,0d0)
-            if (dPhi_new > 0) then
-               lower_bound = x
-            else if (dPhi_new < 0) then
-               upper_bound = x
-            else
-               exit
-            end if
-            limit = abs(upper_bound-lower_bound)
-         end do
-         L1 = (upper_bound + lower_bound)/2
-      end function find_L1    
-
-      real(dp) function find_L2(b) result(L2)
-         real(dp) :: limit, tolerance, x, upper_bound, lower_bound, dPhi_new,q
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-
-         if (q < 1) then
-            upper_bound = 0d0
-            lower_bound = -1d0
-         end if
-
-         if (q .GE. 1) then
-            upper_bound = 2d0
-            lower_bound = 1d0
-         end if 
-
-         x = 0d0
-
-         limit = abs(upper_bound-lower_bound)
-         tolerance = 0.00001d0
-  
-         do while (limit > tolerance)
-            x = (lower_bound+upper_bound)/2
-            dPhi_new = dPhidx(b,x,0d0,0d0)
-            if (dPhi_new > 0) then
-               lower_bound = x
-            else if (dPhi_new < 0) then
-               upper_bound = x
-            else
-               exit
-            end if
-            limit = abs(upper_bound-lower_bound)
-         end do
-         L2 = (upper_bound + lower_bound)/2
-      end function find_L2
-
-      real(dp) function find_L3(b) result(L3)
-         real(dp) :: limit, tolerance, x, upper_bound, lower_bound, dPhi_new,q
-         type(binary_info), pointer :: b
-         include 'formats.inc'
-
-         q = b% m(b% d_i)/b% m(b% a_i)
-
-         if (q .GE. 1) then
-            upper_bound = 0d0
-            lower_bound = -1d0
-         end if
-
-         if (q < 1) then
-            upper_bound = 2d0
-            lower_bound = 1d0
-         end if 
-
-         x = 0d0
-
-         limit = abs(upper_bound-lower_bound)
-         tolerance = 0.00001d0
-  
-         do while (limit > tolerance)
-            x = (lower_bound+upper_bound)/2
-            dPhi_new = dPhidx(b,x,0d0,0d0)
-            if (dPhi_new > 0) then
-               lower_bound = x
-            else if (dPhi_new < 0) then
-               upper_bound = x
-            else
-               exit
-            end if
-            limit = abs(upper_bound-lower_bound)
-         end do
-         L3 = (upper_bound + lower_bound)/2
-      end function find_L3
 
       subroutine brott_wind(id, Lsurf, Msurf, Rsurf, Tsurf, w, ierr)
          use star_def
@@ -612,22 +406,22 @@
          s% xtra26 = s% center_he4
          s% xtra27 = s% center_c12
 
-	 dt = (s% dt)/(365.25*24*60*60)
-	 dt = log10(dt)
-	 write(*,*) "dt =", dt
+         dt = (s% dt)/(365.25*24*60*60)
+         dt = log10(dt)
+         write(*,*) "dt =", dt
 
-	 if (dt < -3.9428) then
-	    write(*,*) "Reached dt minimum of an hour, terminating"
-	    extras_finish_step = terminate
-	    return
-	 end if
+         if (dt < -3.9428) then
+            write(*,*) "Reached dt minimum of an hour, terminating"
+            extras_finish_step = terminate
+            return
+         end if
 
-	 time = dble(time1 - time0) / clock_rate / 60
-	 write(*,*) "time passed is = ", time
+         time = dble(time1 - time0) / clock_rate / 60
+         write(*,*) "time passed is = ", time
 
-	 stop_time = 1380
-	 if (time > stop_time) then
-	    write(*,*) "Reached runtime max of", stop_time ,"minutes, terminating"
+         stop_time = 1380
+         if (time > stop_time) then
+            write(*,*) "Reached runtime max of", stop_time ,"minutes, terminating"
             extras_finish_step = terminate
             return
          end if

@@ -31,12 +31,30 @@ X, Y = np.meshgrid(x, y)
 x_cm = (1/(1+q))
 Z = Phi_z(q,X,Y,0)
 
-plt.figure()
-plt.contour(X, Y, Z, 250, cmap = 'Pastel1')#cmap='Wistia')# cmap='viridis')
-plt.contour(X, Y, Z, 100, levels = (Phi_z(q,L1,0,0),Phi_z(q,L2,0,0), Phi_z(q,L3,0,0)),cmap ="Dark2")#cmap ="tab10")# cmap ='Set1')#cmap='Wistia')# "Oranges")
-plt.title("q = %f"%q)
-plt.xlabel("x")
-plt.ylabel("y")
+fig, ax = plt.subplots()#(figsize=(15,15))
+
+ax.tick_params(axis='both', labelsize=15)
+
+plt.contour(X, Y, Z, 250, cmap = 'gray')#cmap='Wistia')# cmap='viridis')
+
+#sctr = plt.contour(X, Y, Z, 250, cmap = 'Pastel1')
+
+#plt.colorbar(sctr, ax=ax, format='%d')
+#make this just say high potential energy to low potenital energy.
+
+CS = plt.contour(X, Y, Z, 100, levels = (Phi_z(q,L1,0,0),Phi_z(q,L2,0,0), Phi_z(q,L3,0,0)),cmap ="Dark2")#cmap ="tab10")# cmap ='Set1')#cmap='Wistia')# "Oranges")
+
+fmt = {}
+strs = ['L1', 'L2', 'L3']
+for l, s in zip(CS.levels, strs):
+    fmt[l] = s
+    
+plt.clabel(CS,CS.levels[:],inline=1, fmt=fmt, fontsize=18)
+#plt.title("Equipotential surfaces of the Roche Potential")
+plt.xlabel("x (units of separation)",fontsize=20)
+plt.ylabel("y (units of separation)",fontsize=20)
+plt.tight_layout()
+plt.savefig("contour.pdf")
 
 ###############################################################################
 ########################### Radius Calculations ###############################
@@ -147,18 +165,97 @@ def func(x):
 y_pablo = func(np.log10(q_array))
 
 p_error = np.abs(r_rl-y_pablo)/r_rl
-
+"""
 plt.figure()
 plt.title("radius / roche lobe radius error")
 plt.xlabel("q value")
 plt.ylabel("error")
 plt.plot(np.log10(q_array),p_error)
+"""
+fig, ax = plt.subplots()#(figsize=(15,15))
 
-plt.figure()
+ax.tick_params(axis='both', labelsize=20)
+#plt.figure()
 #plt.xscale("log")
-plt.title("radius / roche lobe radius")
-plt.xlabel("log q value")
-plt.ylabel("radius / roche lobe radius")
-plt.plot(np.log10(q_array),r_rl, label = "data")
-plt.plot(np.log10(q_array),y_pablo, label = "fit")
-plt.legend()
+#plt.title("radius / roche lobe radius", fontsize=20)
+plt.xlabel("log q", fontsize=20)
+plt.ylabel(r'$R / R_{rl}$', fontsize=20)
+plt.plot(np.log10(q_array),r_rl, ".", ms=8,label = "data")
+plt.plot(np.log10(q_array),y_pablo, lw=2, label = "fit")
+plt.legend(fontsize=18)
+plt.tight_layout()
+plt.savefig("rl.pdf")
+
+###############################################################################
+####################### Optically thin calculations ###########################
+###############################################################################
+
+def Jackson(q,rv):
+    Phi = -1/(1+q)*(1 + (1/2)*(1/(1+q))) - 1/(rv*(1+q))*(q + \
+             (1/3)*(q+1)*np.power(rv,3) + (4/45)*(q*np.power((1+1/q),2) + \
+              9/q + 3*(1 + 1/q))*np.power(rv,6))
+    return Phi
+
+Roche_array = []
+Outer_array = []
+Difference = []
+
+for i in range(0,len(q_array)):
+    
+    q = q_array[i]
+    
+    L1 = find_L1(q)[0]
+
+    if q <= 1:
+        L = find_L2(q)
+    else:
+        L = find_L3(q)
+        
+    Phi_L1 = Phi_z(q,L1,0,0)
+    Phi_outer = Phi_z(q,L,0,0)
+    
+    Outer_Jackson = Jackson(q_array[i],radius_array[i])
+    Roche_Jackson = Jackson(q_array[i],rl_alt_array[i])
+    
+    Roche = Roche_Jackson/Phi_L1
+    Outer = Outer_Jackson/Phi_outer
+    
+    diff = (Outer_Jackson - Roche_Jackson)/(Phi_outer - Phi_L1)
+    
+    Roche_array.append(Roche)
+    Outer_array.append(Outer)
+    Difference.append(diff)
+    
+
+fig, ax = plt.subplots()#(figsize=(15,15))
+ax.tick_params(axis='both', labelsize=15)
+#plt.figure()
+#plt.xscale("log")
+#plt.title("Phi_jackson/Phi_real", fontsize=20)
+plt.xlabel("log q", fontsize=20)
+plt.ylabel(r'$\Phi_{jackson}/\Phi_{real}$', fontsize=20)
+plt.plot(np.log10(q_array),Roche_array, ".", label = "Roche")
+plt.plot(np.log10(q_array),Outer_array, ".", label = "Outer")
+plt.legend(fontsize=18)
+plt.tight_layout()
+plt.savefig("JackvsReal.pdf")
+
+fig, ax = plt.subplots()#(figsize=(15,15))
+ax.tick_params(axis='both', labelsize=15)
+#plt.figure()
+#plt.xscale("log")
+#plt.title("Phi jackson Phi real Difference", fontsize=20)
+plt.xlabel("log q", fontsize=20)
+plt.ylim(0.9,1.2)
+plt.xlim(-2,2)
+plt.ylabel(r'$\Delta \Phi_{jackson} \Phi_{real}$', fontsize=20)
+plt.plot(np.log10(q_array),Difference, ".")
+plt.tight_layout()
+plt.savefig("JackDifference.pdf")
+
+
+
+
+
+
+
